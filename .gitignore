@@ -7,7 +7,7 @@ Problems/*
 *.lo
 *.o
 *.obj
-
+out.csv
 cmake-*
 
 # Precompiled Headers
