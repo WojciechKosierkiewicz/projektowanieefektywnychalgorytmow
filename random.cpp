@@ -2,8 +2,10 @@
 #include <map>
 #include <vector>
 #include <fstream>
+#include <random>
 #include <sstream>
 #include <unordered_set>
+#include <__random/random_device.h>
 
 struct Edge {
     int weight;
@@ -33,7 +35,7 @@ public:
 void Graph::print() {
     for (auto node: data) {
         for (int i = 0; i < node.second.size(); i++) {
-            std::cout << node.first << " " << node.second[i].weight << std::endl;
+            std::cout << node.first << " " << node.second[i].y << std::endl;
         }
     }
 }
@@ -56,9 +58,6 @@ void Graph::import_from_file(std::string filename) {
         }
         row++;
     }
-    for (auto &edge: data) {
-        std::sort(edge.second.begin(), edge.second.end());
-    }
 }
 
 class Configuration {
@@ -69,8 +68,6 @@ public:
     std::string DataLocation;
     std::string OutPutFilePath;
     double MaxProcessingTime;
-
-    void print();
 };
 
 Configuration::Configuration(std::string filename) {
@@ -104,15 +101,6 @@ Configuration::Configuration(std::string filename) {
     }
 }
 
-void Configuration::print() {
-    std::printf("%s\n", DataLocation.c_str());
-    std::printf("Max Processing Time: %f\n", MaxProcessingTime);
-    if (Asymetric) {
-        std::printf("considering graph as asymetric");
-    } else {
-        std::printf("considering graph as symetric");
-    }
-}
 
 struct TestResult {
     std::string time;
@@ -139,33 +127,53 @@ void print_test_results_to_csv(std::vector<TestResult> testresults, std::string 
     }
 }
 
-TestResult NearestNeighbor(Graph graph, std::string filename) {
+
+void shuffle(std::vector<int> &v) {
+    auto rng = std::default_random_engine(std::random_device{}());
+    std::shuffle(v.begin(), v.end(), rng);
+}
+
+TestResult Algorytm(Graph graph, std::string filename) {
     std::unordered_set<int> visited;
     std::vector<int> path;
-    int pathcost = 0;
-    auto start = std::chrono::high_resolution_clock::now();
-    int current_node = rand() % graph.data.size();
-    path.push_back(current_node);
-    visited.insert(current_node);
-    int i;
-    while (visited.size() != graph.data.size()) {
-        i = 0;
-        while (visited.contains(graph.data[current_node][i].y)) {
-            i++;
-        }
-        pathcost += graph.data[current_node][i].weight;
-        visited.insert(graph.data[current_node][i].y);
-        current_node = graph.data[current_node][i].y;
-        path.push_back(current_node);
+    std::vector<int> tested_path;
+
+    tested_path.reserve(graph.data.size());
+    for (int i = 0; i < graph.data.size(); i++) {
+        tested_path.push_back(i);
     }
-    pathcost += graph.data[i][path[0]].weight;
+
+    int pathcost;
+    int amount_of_edges = 0;
+    int sum_of_cost = 0;
+
+    for (auto node: graph.data)
+        for (auto &i: node.second)
+            sum_of_cost += i.weight;
+
+    int estimated_cost = sum_of_cost / graph.data.size();
+
+    auto start = std::chrono::high_resolution_clock::now();
+    while (true) {
+        pathcost = 0;
+        shuffle(tested_path);
+        pathcost += graph.data[tested_path[tested_path.size() - 1]][tested_path[0]].weight;
+        for (int i = 1; i < tested_path.size(); i++) {
+            pathcost += graph.data[i - 1][tested_path[i]].weight;
+        }
+        if (pathcost < estimated_cost) {
+            path.clear();
+            path.insert(path.begin(), tested_path.begin(), tested_path.end());
+            break;
+        }
+    }
     auto stop = std::chrono::high_resolution_clock::now();
     auto len = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     return TestResult{
         std::to_string(len.count()),
         filename,
         path,
-        pathcost
+        pathcost,
     };
 }
 
@@ -173,11 +181,10 @@ int main() {
     std::srand(static_cast<unsigned>(std::time(0)));
     Configuration config = Configuration("config.txt");
     Graph graph;
-    graph.print();
     std::vector<TestResult> results;
     for (const auto &entry: std::filesystem::directory_iterator(config.DataLocation)) {
         graph = Graph(config.DataLocation + "/" + entry.path().filename().string());
-        results.push_back(NearestNeighbor(graph, entry.path().stem()));
+        results.push_back(Algorytm(graph, entry.path().stem()));
     }
     print_test_results_to_csv(results, config.OutPutFilePath);
 }

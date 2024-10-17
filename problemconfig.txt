@@ -1,6 +1,6 @@
 Asymetric:true
 DataOutputLocation:Problems
-size:5
+size:11
 amount:20
 maxweight:100
 minweight:1
