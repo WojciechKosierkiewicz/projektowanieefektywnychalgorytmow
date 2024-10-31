@@ -1,4 +1,4 @@
 Asymetric:true
-MaxProcessingTime:0.5
+MaxProcessingTime:20.0
 DataLocation:Problems
 OutPutFilePath:out.csv

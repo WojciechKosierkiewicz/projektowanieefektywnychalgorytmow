@@ -4,62 +4,8 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_set>
+#include "Graph.h"
 
-struct Edge {
-    int weight;
-    int y;
-
-    bool operator<(const Edge &other) const {
-        return weight < other.weight;
-    }
-};
-
-class Graph {
-public:
-    std::map<int, std::vector<Edge> > data;
-
-    Graph() {
-    }
-
-    Graph(std::string filename) {
-        import_from_file(filename);
-    }
-
-    void import_from_file(std::string filename);
-
-    void print();
-};
-
-void Graph::print() {
-    for (auto node: data) {
-        for (int i = 0; i < node.second.size(); i++) {
-            std::cout << node.first << " " << node.second[i].weight << std::endl;
-        }
-    }
-}
-
-void Graph::import_from_file(std::string filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cout << "nie znaleziono pliku :( " + filename << "\n";
-    }
-    std::string line;
-    int row = 0;
-    int col = 0;
-    int num;
-    while (std::getline(file, line)) {
-        col = 0;
-        std::istringstream ststream(line);
-        while (ststream >> num) {
-            data[row].push_back(Edge{num, col});
-            col++;
-        }
-        row++;
-    }
-    for (auto &edge: data) {
-        std::sort(edge.second.begin(), edge.second.end());
-    }
-}
 
 class Configuration {
 public:
@@ -161,6 +107,12 @@ TestResult NearestNeighbor(Graph graph, std::string filename) {
     pathcost += graph.data[i][path[0]].weight;
     auto stop = std::chrono::high_resolution_clock::now();
     auto len = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    std::cout << "problem " << filename.c_str() << std::endl;
+    std::cout << "koszt " << pathcost << std::endl;
+    for (int i = 0; i < path.size(); i++) {
+        std::cout << path[i] << " ";
+    }
+    std::cout << std::endl;
     return TestResult{
         std::to_string(len.count()),
         filename,

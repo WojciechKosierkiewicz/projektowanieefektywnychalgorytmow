@@ -4,59 +4,8 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_set>
+#include "Graph.h"
 
-struct Edge {
-    int weight;
-    int y;
-
-    bool operator<(const Edge &other) const {
-        return weight < other.weight;
-    }
-};
-
-class Graph {
-public:
-    std::map<int, std::vector<Edge> > data;
-
-    Graph() {
-    }
-
-    Graph(std::string filename) {
-        import_from_file(filename);
-    }
-
-    void import_from_file(std::string filename);
-
-    void print();
-};
-
-void Graph::print() {
-    for (auto node: data) {
-        for (int i = 0; i < node.second.size(); i++) {
-            std::cout << node.first << " " << node.second[i].y << std::endl;
-        }
-    }
-}
-
-void Graph::import_from_file(std::string filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cout << "nie znaleziono pliku :( " + filename << "\n";
-    }
-    std::string line;
-    int row = 0;
-    int col = 0;
-    int num;
-    while (std::getline(file, line)) {
-        col = 0;
-        std::istringstream ststream(line);
-        while (ststream >> num) {
-            data[row].push_back(Edge{num, col});
-            col++;
-        }
-        row++;
-    }
-}
 
 class Configuration {
 public:
@@ -210,16 +159,24 @@ TestResult Algorytm(Graph graph, std::string filename) {
             path.insert(path.begin(), tested_path.begin(), tested_path.end());
             mincost = pathcost;
         }
-        std::cout << mincost << std::endl;
     } while (permutuj(tested_path));
     auto stop = std::chrono::high_resolution_clock::now();
     auto len = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    return TestResult{
-        std::to_string(len.count()),
-        filename,
-        path,
-        mincost,
-    };
+
+    std::cout << "problem " << filename.c_str() << std::endl;
+    std::cout << "koszt " << mincost << std::endl;
+    for (int i = 0; i < tested_path.size(); i++) {
+        std::cout << tested_path[i] << " ";
+    }
+    std::cout << std::endl;
+
+    return
+            TestResult{
+                std::to_string(len.count()),
+                filename,
+                path,
+                mincost,
+            };
 }
 
 int main() {

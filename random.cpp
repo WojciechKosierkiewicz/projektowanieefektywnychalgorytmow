@@ -3,62 +3,10 @@
 #include <vector>
 #include <fstream>
 #include <random>
-#include <sstream>
 #include <unordered_set>
 #include <__random/random_device.h>
+#include "Graph.h"
 
-struct Edge {
-    int weight;
-    int y;
-
-    bool operator<(const Edge &other) const {
-        return weight < other.weight;
-    }
-};
-
-class Graph {
-public:
-    std::map<int, std::vector<Edge> > data;
-
-    Graph() {
-    }
-
-    Graph(std::string filename) {
-        import_from_file(filename);
-    }
-
-    void import_from_file(std::string filename);
-
-    void print();
-};
-
-void Graph::print() {
-    for (auto node: data) {
-        for (int i = 0; i < node.second.size(); i++) {
-            std::cout << node.first << " " << node.second[i].y << std::endl;
-        }
-    }
-}
-
-void Graph::import_from_file(std::string filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cout << "nie znaleziono pliku :( " + filename << "\n";
-    }
-    std::string line;
-    int row = 0;
-    int col = 0;
-    int num;
-    while (std::getline(file, line)) {
-        col = 0;
-        std::istringstream ststream(line);
-        while (ststream >> num) {
-            data[row].push_back(Edge{num, col});
-            col++;
-        }
-        row++;
-    }
-}
 
 class Configuration {
 public:
@@ -101,7 +49,6 @@ Configuration::Configuration(std::string filename) {
     }
 }
 
-
 struct TestResult {
     std::string time;
     std::string filename;
@@ -133,7 +80,7 @@ void shuffle(std::vector<int> &v) {
     std::shuffle(v.begin(), v.end(), rng);
 }
 
-TestResult Algorytm(Graph graph, std::string filename) {
+TestResult Algorytm(Graph graph, std::string filename, Configuration config) {
     std::unordered_set<int> visited;
     std::vector<int> path;
     std::vector<int> tested_path;
@@ -144,7 +91,6 @@ TestResult Algorytm(Graph graph, std::string filename) {
     }
 
     int pathcost;
-    int amount_of_edges = 0;
     int sum_of_cost = 0;
 
     for (auto node: graph.data)
@@ -166,9 +112,21 @@ TestResult Algorytm(Graph graph, std::string filename) {
             path.insert(path.begin(), tested_path.begin(), tested_path.end());
             break;
         }
+        if (std::chrono::duration_cast<std::chrono::minutes>(std::chrono::high_resolution_clock::now() - start).count()
+            < config.MaxProcessingTime) {
+            path.clear();
+            path.insert(path.begin(), tested_path.begin(), tested_path.end());
+            break;
+        }
     }
     auto stop = std::chrono::high_resolution_clock::now();
     auto len = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    std::cout << "problem " << filename.c_str() << std::endl;
+    std::cout << "koszt " << pathcost << std::endl;
+    for (int i = 0; i < path.size(); i++) {
+        std::cout << path[i] << " ";
+    }
+    std::cout << std::endl;
     return TestResult{
         std::to_string(len.count()),
         filename,
@@ -184,7 +142,7 @@ int main() {
     std::vector<TestResult> results;
     for (const auto &entry: std::filesystem::directory_iterator(config.DataLocation)) {
         graph = Graph(config.DataLocation + "/" + entry.path().filename().string());
-        results.push_back(Algorytm(graph, entry.path().stem()));
+        results.push_back(Algorytm(graph, entry.path().stem(), config));
     }
     print_test_results_to_csv(results, config.OutPutFilePath);
 }
